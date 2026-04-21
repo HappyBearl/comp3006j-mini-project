@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head><title>Poster Submission</title>
+<style>
+body{font-family:sans-serif;max-width:600px;margin:auto;padding:20px}
+input,textarea{width:100%;padding:8px;margin:8px 0}
+button{background:#007bff;color:white;padding:10px 20px;border:none;cursor:pointer}
+#result{margin-top:20px;padding:15px}
+.ready{background:#d4edda;color:#155724}
+.needs-revision{background:#fff3cd;color:#856404}
+.incomplete{background:#f8d7da;color:#721c24}
+</style>
+</head>
+<body>
+<h1>🎨 Event Poster Submission</h1>
+<form id="form">
+<label>Title:</label><br>
+<input type="text" id="title" required><br>
+<label>Description (at least 30 chars):</label><br>
+<textarea id="description" rows="4" required></textarea><br>
+<label>Poster filename (.jpg/.jpeg/.png):</label><br>
+<input type="text" id="poster_filename" required><br>
+<button type="submit">Submit</button>
+</form>
+<div id="result" style="display:none;"></div>
+<script>
+const WORKFLOW_URL = 'http://8.136.137.45';
+document.getElementById('form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const title = document.getElementById('title').value;
+    const description = document.getElementById('description').value;
+    const poster_filename = document.getElementById('poster_filename').value;
+    const res = await fetch(`${WORKFLOW_URL}/submit`, {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({title,description,poster_filename})
+    });
+    const data = await res.json();
+    const subId = data.submission_id;
+    const resultDiv = document.getElementById('result');
+    resultDiv.style.display='block';
+    resultDiv.innerHTML='<p>Processing...</p>';
+    const interval = setInterval(async () => {
+        const r = await fetch(`${WORKFLOW_URL}/result/${subId}`);
+        const result = await r.json();
+        if(result.status && result.status !== 'PENDING') {
+            clearInterval(interval);
+            let cls = '';
+            if(result.status==='READY') cls='ready';
+            else if(result.status==='NEEDS_REVISION') cls='needs-revision';
+            else cls='incomplete';
+            resultDiv.className = cls;
+            resultDiv.innerHTML = `<h3>Status: ${result.status}</h3><p>${result.note}</p><p><strong>Title:</strong> ${result.title}</p><p><strong>Description:</strong> ${result.description}</p>`;
+        }
+    }, 2000);
+});
+</script>
+</body>
+</html>
